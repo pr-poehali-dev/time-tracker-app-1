@@ -1,0 +1,15 @@
+{
+  "tests": [
+    {
+      "name": "Получение списка проектов и активностей",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "projects": "array",
+        "activities": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "tests": [
+    {
+      "name": "Успешная авторизация сотрудника",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "email": "ivan@company.com",
+        "password": "password123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "user": {
+          "email": "ivan@company.com",
+          "role": "employee"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Неверный пароль",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "email": "ivan@company.com",
+        "password": "wrongpass"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
