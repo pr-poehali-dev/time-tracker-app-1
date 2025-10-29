@@ -19,19 +19,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 p-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl mb-4 animate-scale-in">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-xl mb-4">
             <Icon name="Clock" size={32} className="text-white" />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h1 className="text-3xl font-semibold text-gray-900">
             TimeTracker
           </h1>
-          <p className="text-muted-foreground mt-2">Управляйте временем эффективно</p>
+          <p className="text-gray-500 mt-2">Учёт рабочего времени</p>
         </div>
 
-        <Card className="p-6 backdrop-blur-sm bg-card/95 border-border/50 shadow-2xl">
+        <Card className="p-6 bg-white border shadow-sm">
           <Tabs defaultValue="employee" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="employee" className="transition-all">
@@ -53,7 +53,7 @@ const Login = () => {
                   placeholder="employee@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="transition-all focus:scale-[1.01]"
+                  className=""
                 />
               </div>
               <div className="space-y-2">
@@ -64,12 +64,12 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="transition-all focus:scale-[1.01]"
+                  className=""
                 />
               </div>
               <Button 
                 onClick={() => handleLogin('employee')} 
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-all hover:scale-[1.02]"
+                className="w-full"
               >
                 <Icon name="LogIn" size={16} className="mr-2" />
                 Войти как сотрудник
@@ -85,7 +85,7 @@ const Login = () => {
                   placeholder="admin@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="transition-all focus:scale-[1.01]"
+                  className=""
                 />
               </div>
               <div className="space-y-2">
@@ -96,12 +96,12 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="transition-all focus:scale-[1.01]"
+                  className=""
                 />
               </div>
               <Button 
                 onClick={() => handleLogin('admin')} 
-                className="w-full bg-gradient-to-r from-secondary to-primary hover:opacity-90 transition-all hover:scale-[1.02]"
+                className="w-full"
               >
                 <Icon name="Shield" size={16} className="mr-2" />
                 Войти как администратор
@@ -109,7 +109,7 @@ const Login = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-6 text-center text-sm text-gray-500">
             <p>Забыли пароль? <span className="text-primary cursor-pointer hover:underline">Восстановить</span></p>
           </div>
         </Card>

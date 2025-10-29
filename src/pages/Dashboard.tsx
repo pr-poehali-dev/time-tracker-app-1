@@ -2,42 +2,57 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+
+interface TimeEntry {
+  id: string;
+  date: string;
+  project: string;
+  activity: string;
+  hours: number;
+  employee: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<'employee' | 'admin' | null>(null);
-  const [isTracking, setIsTracking] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [userEmail, setUserEmail] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [hours, setHours] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([
+    { id: '1', date: '2025-10-28', project: 'Проект А', activity: 'Разработка', hours: 6, employee: 'employee@company.com' },
+    { id: '2', date: '2025-10-28', project: 'Проект Б', activity: 'Тестирование', hours: 2, employee: 'employee@company.com' },
+    { id: '3', date: '2025-10-27', project: 'Проект А', activity: 'Код-ревью', hours: 4, employee: 'employee@company.com' },
+    { id: '4', date: '2025-10-27', project: 'Проект В', activity: 'Встречи', hours: 3.5, employee: 'employee@company.com' },
+    { id: '5', date: '2025-10-28', project: 'Проект Б', activity: 'Разработка', hours: 7, employee: 'maria@company.com' },
+    { id: '6', date: '2025-10-27', project: 'Проект А', activity: 'Тестирование', hours: 8, employee: 'maria@company.com' },
+    { id: '7', date: '2025-10-28', project: 'Проект В', activity: 'Документация', hours: 5, employee: 'alex@company.com' },
+  ]);
 
   useEffect(() => {
     const role = localStorage.getItem('userRole') as 'employee' | 'admin' | null;
+    const email = localStorage.getItem('userEmail') || '';
     if (!role) {
       navigate('/');
       return;
     }
     setUserRole(role);
+    setUserEmail(email);
   }, [navigate]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isTracking) {
-      interval = setInterval(() => {
-        setCurrentTime(prev => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isTracking]);
 
   const handleLogout = () => {
     localStorage.removeItem('userRole');
@@ -45,56 +60,99 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const handleAddEntry = () => {
+    if (!selectedDate || !selectedProject || !selectedActivity || !hours) {
+      return;
+    }
+
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const dailyTotal = timeEntries
+      .filter(entry => entry.date === dateStr && entry.employee === userEmail)
+      .reduce((sum, entry) => sum + entry.hours, 0);
+
+    const newHours = parseFloat(hours);
+    if (dailyTotal + newHours > 8) {
+      alert(`Превышена норма! У вас уже ${dailyTotal}ч за этот день. Максимум 8ч/день.`);
+      return;
+    }
+
+    const newEntry: TimeEntry = {
+      id: Date.now().toString(),
+      date: dateStr,
+      project: selectedProject,
+      activity: selectedActivity,
+      hours: newHours,
+      employee: userEmail,
+    };
+
+    setTimeEntries([newEntry, ...timeEntries]);
+    setSelectedProject('');
+    setSelectedActivity('');
+    setHours('');
+    setIsDialogOpen(false);
   };
 
-  const weekData = [
-    { day: 'Пн', hours: 8.5 },
-    { day: 'Вт', hours: 7.2 },
-    { day: 'Ср', hours: 9.1 },
-    { day: 'Чт', hours: 8.0 },
-    { day: 'Пт', hours: 6.5 },
-  ];
-
-  const projectData = [
-    { name: 'Проект А', value: 35, color: '#8B5CF6' },
-    { name: 'Проект Б', value: 28, color: '#0EA5E9' },
-    { name: 'Проект В', value: 20, color: '#10B981' },
-    { name: 'Прочее', value: 17, color: '#F59E0B' },
-  ];
-
-  const activityData = [
-    { month: 'Янв', hours: 160 },
-    { month: 'Фев', hours: 155 },
-    { month: 'Мар', hours: 175 },
-    { month: 'Апр', hours: 168 },
-    { month: 'Май', hours: 180 },
-    { month: 'Июн', hours: 172 },
-  ];
+  const handleDeleteEntry = (id: string) => {
+    setTimeEntries(timeEntries.filter(entry => entry.id !== id));
+  };
 
   const projects = ['Проект А', 'Проект Б', 'Проект В', 'Проект Г'];
   const activities = ['Разработка', 'Тестирование', 'Встречи', 'Документация', 'Код-ревью'];
 
+  const myEntries = timeEntries.filter(entry => entry.employee === userEmail);
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const todayHours = myEntries.filter(e => e.date === today).reduce((sum, e) => sum + e.hours, 0);
+  
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    return format(date, 'yyyy-MM-dd');
+  }).reverse();
+
+  const weekData = last7Days.map(date => ({
+    day: format(new Date(date), 'EEE', { locale: ru }),
+    hours: myEntries.filter(e => e.date === date).reduce((sum, e) => sum + e.hours, 0)
+  }));
+
+  const projectStats = projects.map(project => {
+    const projectHours = myEntries.filter(e => e.project === project).reduce((sum, e) => sum + e.hours, 0);
+    return { project, hours: projectHours };
+  }).filter(stat => stat.hours > 0);
+
+  const employees = [
+    { email: 'employee@company.com', name: 'Иван Петров' },
+    { email: 'maria@company.com', name: 'Мария Сидорова' },
+    { email: 'alex@company.com', name: 'Алексей Смирнов' },
+  ];
+
+  const employeeStats = employees.map(emp => {
+    const empEntries = timeEntries.filter(e => e.employee === emp.email);
+    const totalHours = empEntries.reduce((sum, e) => sum + e.hours, 0);
+    const projectsWorked = [...new Set(empEntries.map(e => e.project))];
+    return {
+      ...emp,
+      totalHours,
+      projectsCount: projectsWorked.length,
+      lastEntry: empEntries[0]?.date || '-'
+    };
+  });
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 backdrop-blur-sm bg-card/50 sticky top-0 z-50">
+    <div className="min-h-screen bg-gray-50">
+      <header className="border-b bg-white sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-              <Icon name="Clock" size={24} className="text-white" />
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <Icon name="Clock" size={20} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold">TimeTracker</h1>
+            <h1 className="text-xl font-semibold text-gray-900">TimeTracker</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm text-muted-foreground">Вы вошли как</p>
-              <p className="font-semibold">{userRole === 'admin' ? 'Администратор' : 'Сотрудник'}</p>
+              <p className="text-xs text-gray-500">Вы вошли как</p>
+              <p className="text-sm font-medium text-gray-900">{userRole === 'admin' ? 'Администратор' : 'Сотрудник'}</p>
             </div>
-            <Button variant="outline" onClick={handleLogout} className="hover:scale-105 transition-all">
+            <Button variant="outline" onClick={handleLogout} size="sm">
               <Icon name="LogOut" size={16} className="mr-2" />
               Выйти
             </Button>
@@ -102,420 +160,320 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="tracker" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="tracker" className="transition-all">
-              <Icon name="Timer" size={16} className="mr-2" />
-              Трекер
+      <main className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="entries" className="space-y-6">
+          <TabsList className="bg-white border">
+            <TabsTrigger value="entries">
+              <Icon name="ListChecks" size={16} className="mr-2" />
+              Записи времени
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="transition-all">
-              <Icon name="LayoutDashboard" size={16} className="mr-2" />
-              Дашборд
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="transition-all">
-              <Icon name="FolderKanban" size={16} className="mr-2" />
-              Проекты
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="transition-all">
-              <Icon name="Calendar" size={16} className="mr-2" />
-              Календарь
+            <TabsTrigger value="stats">
+              <Icon name="BarChart3" size={16} className="mr-2" />
+              Статистика
             </TabsTrigger>
             {userRole === 'admin' && (
-              <TabsTrigger value="team" className="transition-all">
+              <TabsTrigger value="team">
                 <Icon name="Users" size={16} className="mr-2" />
-                Команда
+                Сотрудники
               </TabsTrigger>
             )}
           </TabsList>
 
-          <TabsContent value="tracker" className="space-y-6 animate-fade-in">
-            <Card className="backdrop-blur-sm bg-card/95 border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="Timer" size={24} className="text-primary" />
-                  Текущая сессия
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-center py-8">
-                  <div className="text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    {formatTime(currentTime)}
-                  </div>
-                  <p className="text-muted-foreground mt-2">
-                    {isTracking ? 'Идет отслеживание времени' : 'Готово к старту'}
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Проект</label>
-                    <Select value={selectedProject} onValueChange={setSelectedProject}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите проект" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map(project => (
-                          <SelectItem key={project} value={project}>{project}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Тип занятости</label>
-                    <Select value={selectedActivity} onValueChange={setSelectedActivity}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите активность" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activities.map(activity => (
-                          <SelectItem key={activity} value={activity}>{activity}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 justify-center">
-                  <Button
-                    size="lg"
-                    onClick={() => setIsTracking(!isTracking)}
-                    className={`transition-all hover:scale-105 ${
-                      isTracking 
-                        ? 'bg-destructive hover:bg-destructive/90' 
-                        : 'bg-gradient-to-r from-primary to-secondary hover:opacity-90'
-                    }`}
-                  >
-                    <Icon name={isTracking ? 'Pause' : 'Play'} size={20} className="mr-2" />
-                    {isTracking ? 'Остановить' : 'Начать'}
+          <TabsContent value="entries" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Мои записи</h2>
+                <p className="text-sm text-gray-500 mt-1">Учёт рабочего времени (норма 8ч/день)</p>
+              </div>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Icon name="Plus" size={16} className="mr-2" />
+                    Добавить запись
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => setCurrentTime(0)}
-                    className="transition-all hover:scale-105"
-                  >
-                    <Icon name="RotateCcw" size={20} className="mr-2" />
-                    Сбросить
-                  </Button>
-                </div>
+                </DialogTrigger>
+                <DialogContent className="bg-white">
+                  <DialogHeader>
+                    <DialogTitle>Новая запись времени</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label>Дата</Label>
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        className="rounded-md border"
+                        locale={ru}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Проект</Label>
+                      <Select value={selectedProject} onValueChange={setSelectedProject}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите проект" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map(project => (
+                            <SelectItem key={project} value={project}>{project}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Тип занятости</Label>
+                      <Select value={selectedActivity} onValueChange={setSelectedActivity}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите активность" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activities.map(activity => (
+                            <SelectItem key={activity} value={activity}>{activity}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Количество часов</Label>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="8"
+                        placeholder="0.0"
+                        value={hours}
+                        onChange={(e) => setHours(e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500">Максимум 8 часов в день</p>
+                    </div>
+                    <Button onClick={handleAddEntry} className="w-full">
+                      Добавить запись
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Дата</TableHead>
+                      <TableHead>Проект</TableHead>
+                      <TableHead>Тип занятости</TableHead>
+                      <TableHead className="text-right">Часы</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {myEntries.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                          Нет записей. Добавьте первую запись времени.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      myEntries.map(entry => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="font-medium">
+                            {format(new Date(entry.date), 'dd MMM yyyy', { locale: ru })}
+                          </TableCell>
+                          <TableCell>{entry.project}</TableCell>
+                          <TableCell>{entry.activity}</TableCell>
+                          <TableCell className="text-right font-semibold">{entry.hours}ч</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteEntry(entry.id)}
+                            >
+                              <Icon name="Trash2" size={16} className="text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="dashboard" className="space-y-6 animate-fade-in">
-            <div className="grid md:grid-cols-4 gap-4">
-              <Card className="backdrop-blur-sm bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <TabsContent value="stats" className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card>
                 <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Сегодня</p>
-                      <p className="text-3xl font-bold">7.5ч</p>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500">Сегодня</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{todayHours}ч</p>
+                    <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all" 
+                        style={{ width: `${(todayHours / 8) * 100}%` }}
+                      />
                     </div>
-                    <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
-                      <Icon name="Clock" size={24} className="text-primary" />
-                    </div>
+                    <p className="text-xs text-gray-500 mt-2">из 8 часов</p>
                   </div>
-                  <Progress value={93} className="mt-3" />
                 </CardContent>
               </Card>
 
-              <Card className="backdrop-blur-sm bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
+              <Card>
                 <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Эта неделя</p>
-                      <p className="text-3xl font-bold">39.3ч</p>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500">Эта неделя</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">
+                      {weekData.reduce((sum, day) => sum + day.hours, 0)}ч
+                    </p>
+                    <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all" 
+                        style={{ width: `${(weekData.reduce((sum, day) => sum + day.hours, 0) / 40) * 100}%` }}
+                      />
                     </div>
-                    <div className="w-12 h-12 bg-secondary/20 rounded-xl flex items-center justify-center">
-                      <Icon name="TrendingUp" size={24} className="text-secondary" />
-                    </div>
+                    <p className="text-xs text-gray-500 mt-2">из 40 часов</p>
                   </div>
-                  <Progress value={98} className="mt-3" />
                 </CardContent>
               </Card>
 
-              <Card className="backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+              <Card>
                 <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Этот месяц</p>
-                      <p className="text-3xl font-bold">172ч</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
-                      <Icon name="Calendar" size={24} className="text-green-500" />
-                    </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500">Всего проектов</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{projectStats.length}</p>
+                    <p className="text-xs text-gray-500 mt-4">Активных проекта</p>
                   </div>
-                  <Progress value={86} className="mt-3" />
-                </CardContent>
-              </Card>
-
-              <Card className="backdrop-blur-sm bg-gradient-to-br from-orange-500/10 to-orange-500/5 border-orange-500/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Проекты</p>
-                      <p className="text-3xl font-bold">4</p>
-                    </div>
-                    <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
-                      <Icon name="FolderKanban" size={24} className="text-orange-500" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-3">Активных проекта</p>
                 </CardContent>
               </Card>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
-              <Card className="backdrop-blur-sm bg-card/95 border-border/50">
+              <Card>
                 <CardHeader>
-                  <CardTitle>Активность за неделю</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Часы по дням недели</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={weekData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
-                      <YAxis stroke="hsl(var(--muted-foreground))" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="day" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
                       <Tooltip 
                         contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
                           borderRadius: '8px'
                         }}
                       />
-                      <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
 
-              <Card className="backdrop-blur-sm bg-card/95 border-border/50">
+              <Card>
                 <CardHeader>
-                  <CardTitle>Распределение по проектам</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Распределение по проектам</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={projectData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry) => `${entry.name}: ${entry.value}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {projectData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="backdrop-blur-sm bg-card/95 border-border/50 lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Динамика за 6 месяцев</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={activityData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                      <YAxis stroke="hsl(var(--muted-foreground))" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="hours" 
-                        stroke="hsl(var(--secondary))" 
-                        strokeWidth={3}
-                        dot={{ fill: 'hsl(var(--secondary))', r: 6 }}
-                        name="Часы"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="projects" className="animate-fade-in">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((project, index) => (
-                <Card key={project} className="backdrop-blur-sm bg-card/95 border-border/50 hover:scale-105 transition-all cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{project}</h3>
-                        <p className="text-sm text-muted-foreground">Активный проект</p>
-                      </div>
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        index === 0 ? 'bg-primary/20' :
-                        index === 1 ? 'bg-secondary/20' :
-                        index === 2 ? 'bg-green-500/20' : 'bg-orange-500/20'
-                      }`}>
-                        <Icon name="FolderKanban" size={20} className={
-                          index === 0 ? 'text-primary' :
-                          index === 1 ? 'text-secondary' :
-                          index === 2 ? 'text-green-500' : 'text-orange-500'
-                        } />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Прогресс</span>
-                        <span className="font-medium">{85 - index * 10}%</span>
-                      </div>
-                      <Progress value={85 - index * 10} />
-                      <div className="flex justify-between text-sm pt-2">
-                        <span className="text-muted-foreground">Часов: {120 - index * 20}</span>
-                        <span className="text-muted-foreground">Задач: {15 - index * 3}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="calendar" className="animate-fade-in">
-            <div className="grid lg:grid-cols-3 gap-6">
-              <Card className="backdrop-blur-sm bg-card/95 border-border/50 lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Выберите дату</CardTitle>
-                </CardHeader>
-                <CardContent className="flex justify-center">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border border-border"
-                    locale={ru}
-                  />
-                </CardContent>
-              </Card>
-
-              <div className="space-y-4">
-                <Card className="backdrop-blur-sm bg-card/95 border-border/50">
-                  <CardHeader>
-                    <CardTitle className="text-base">
-                      {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: ru }) : 'Выберите дату'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Icon name="Clock" size={16} className="text-primary" />
-                          <span className="text-sm">Всего часов</span>
+                  <div className="space-y-3">
+                    {projectStats.map((stat, index) => (
+                      <div key={stat.project}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="font-medium text-gray-700">{stat.project}</span>
+                          <span className="text-gray-900 font-semibold">{stat.hours}ч</span>
                         </div>
-                        <span className="font-semibold">8.5ч</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-secondary/10 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Icon name="FolderKanban" size={16} className="text-secondary" />
-                          <span className="text-sm">Проектов</span>
-                        </div>
-                        <span className="font-semibold">3</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Icon name="CheckCircle2" size={16} className="text-green-500" />
-                          <span className="text-sm">Задач</span>
-                        </div>
-                        <span className="font-semibold">12</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="backdrop-blur-sm bg-card/95 border-border/50">
-                  <CardHeader>
-                    <CardTitle className="text-base">Сессии</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {[
-                      { time: '09:00 - 12:30', project: 'Проект А', hours: '3.5ч' },
-                      { time: '13:30 - 17:00', project: 'Проект Б', hours: '3.5ч' },
-                      { time: '17:30 - 19:00', project: 'Проект В', hours: '1.5ч' },
-                    ].map((session, index) => (
-                      <div key={index} className="p-3 bg-muted/50 rounded-lg space-y-1">
-                        <div className="flex justify-between items-start">
-                          <span className="text-sm font-medium">{session.project}</span>
-                          <span className="text-xs text-primary">{session.hours}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{session.time}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          {userRole === 'admin' && (
-            <TabsContent value="team" className="animate-fade-in">
-              <Card className="backdrop-blur-sm bg-card/95 border-border/50">
-                <CardHeader>
-                  <CardTitle>Команда</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { name: 'Иван Петров', role: 'Frontend Developer', hours: 172, projects: 3, avatar: '👨‍💻' },
-                      { name: 'Мария Сидорова', role: 'Backend Developer', hours: 168, projects: 4, avatar: '👩‍💻' },
-                      { name: 'Алексей Смирнов', role: 'QA Engineer', hours: 160, projects: 5, avatar: '🧑‍💻' },
-                      { name: 'Елена Кузнецова', role: 'UI/UX Designer', hours: 156, projects: 2, avatar: '👩‍🎨' },
-                    ].map((member, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center justify-between p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-all"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-2xl">
-                            {member.avatar}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold">{member.name}</h4>
-                            <p className="text-sm text-muted-foreground">{member.role}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-8 text-sm">
-                          <div className="text-center">
-                            <p className="font-semibold">{member.hours}ч</p>
-                            <p className="text-muted-foreground">Этот месяц</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="font-semibold">{member.projects}</p>
-                            <p className="text-muted-foreground">Проектов</p>
-                          </div>
-                          <Button variant="outline" size="sm" className="hover:scale-105 transition-all">
-                            <Icon name="Eye" size={16} className="mr-2" />
-                            Детали
-                          </Button>
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all" 
+                            style={{ 
+                              width: `${(stat.hours / Math.max(...projectStats.map(s => s.hours))) * 100}%`,
+                              opacity: 1 - (index * 0.15)
+                            }}
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          {userRole === 'admin' && (
+            <TabsContent value="team" className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Сотрудники</h2>
+                <p className="text-sm text-gray-500 mt-1">Статистика по команде</p>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Сотрудник</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right">Всего часов</TableHead>
+                        <TableHead className="text-right">Проектов</TableHead>
+                        <TableHead>Последняя запись</TableHead>
+                        <TableHead className="text-right">Действия</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {employeeStats.map(emp => (
+                        <TableRow key={emp.email}>
+                          <TableCell className="font-medium">{emp.name}</TableCell>
+                          <TableCell className="text-gray-600">{emp.email}</TableCell>
+                          <TableCell className="text-right font-semibold">{emp.totalHours}ч</TableCell>
+                          <TableCell className="text-right">{emp.projectsCount}</TableCell>
+                          <TableCell>
+                            {emp.lastEntry !== '-' ? format(new Date(emp.lastEntry), 'dd MMM yyyy', { locale: ru }) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm">
+                              <Icon name="Eye" size={16} className="mr-2" />
+                              Детали
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <div className="grid lg:grid-cols-3 gap-4">
+                {projects.map((project) => {
+                  const projectEntries = timeEntries.filter(e => e.project === project);
+                  const projectHours = projectEntries.reduce((sum, e) => sum + e.hours, 0);
+                  const projectEmployees = [...new Set(projectEntries.map(e => e.employee))];
+                  
+                  return (
+                    <Card key={project}>
+                      <CardHeader>
+                        <CardTitle className="text-base font-semibold">{project}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Всего часов</span>
+                            <span className="font-semibold text-gray-900">{projectHours}ч</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Сотрудников</span>
+                            <span className="font-semibold text-gray-900">{projectEmployees.length}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Записей</span>
+                            <span className="font-semibold text-gray-900">{projectEntries.length}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </TabsContent>
           )}
         </Tabs>
